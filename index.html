@@ -235,10 +235,10 @@ body::after{content:"";position:fixed;inset:-50%;z-index:100;pointer-events:none
 @media (max-width:479px){.btn{padding:0 48px 0 20px;letter-spacing:.05em;font-size:13px;white-space:nowrap}.btn::after{right:30px}}
 .hero-texto .chips{justify-content:center;margin-top:28px}
 @media (min-width:700px){
-  .hero{display:grid;grid-template-rows:minmax(0,1fr) auto;align-items:stretch;height:calc(100svh - var(--faixa,34px));min-height:0}
+  .hero{display:grid;grid-template-rows:minmax(0,1fr) auto;align-items:stretch;height:clamp(640px, calc(100svh - var(--faixa,34px)), calc(28.7vw + 480px));min-height:0}
   .hero-bg{position:relative;inset:auto;grid-row:1;min-height:0;height:100%;aspect-ratio:auto;opacity:1}
   .hero-bg img{inset:auto;top:0;left:50%;width:126.5%;max-width:1920px;height:126.5%;max-height:605px;object-fit:contain;object-position:center top;transform:translateX(-50%)}
-  .hero-in{grid-row:2;padding-block:0 clamp(12px,2svh,24px);margin-bottom:-80px;transform:translateY(-160px)}
+  .hero-in{grid-row:2;padding-block:0 clamp(12px,2svh,24px);margin-bottom:var(--hero-mb,-80px);transform:translateY(var(--hero-sobe,-160px))}
   .hero-vinho,.hero-veu,.vidro,.lamp-glow{display:none}
   .hero-texto{width:100%}
   .hero-meta{flex-direction:row;gap:16px}
@@ -646,6 +646,32 @@ fbq('track', 'PageView');
     </div>
   </div>
 </header>
+<script>
+/* hero desktop: o texto sobe sobre a foto só até abaixo dos rostos (queixos ~70% da altura da foto) */
+(function(){
+  var hero = document.getElementById('topo'), img = hero.querySelector('.hero-bg img'), txt = hero.querySelector('.hero-in');
+  var mq = window.matchMedia('(min-width:700px)');
+  function ajusta(){
+    if (!mq.matches) { hero.style.removeProperty('--hero-sobe'); hero.style.removeProperty('--hero-mb'); return; }
+    var sobe = 160;
+    for (var i = 0; i < 6; i++) {                                /* a foto encolhe junto, então repete até estabilizar */
+      hero.style.setProperty('--hero-sobe', (-sobe) + 'px');
+      hero.style.setProperty('--hero-mb', (80 - sobe) + 'px');   /* o que o texto deixa de subir vira espaço reservado para ele */
+      var r = img.offsetHeight, w = img.offsetWidth, topoFoto = img.parentNode.offsetTop;
+      var altFoto = Math.min(r, w * 605 / 1920);                 /* object-fit: contain, alinhada ao topo */
+      var linhaSegura = topoFoto + altFoto * 0.72;               /* abaixo dos queixos */
+      var topoNatural = txt.offsetTop;                           /* posição do texto sem o deslocamento */
+      var novo = Math.max(0, Math.min(160, topoNatural - linhaSegura));
+      if (Math.abs(novo - sobe) < 1) break;
+      sobe = novo;
+    }
+  }
+  ajusta();
+  window.addEventListener('resize', ajusta);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(ajusta);
+  window.addEventListener('load', ajusta);
+})();
+</script>
 
 <main id="conteudo-principal">
 
