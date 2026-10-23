@@ -535,7 +535,7 @@ dialog::backdrop{background:rgba(0,0,0,.78);-webkit-backdrop-filter:blur(6px);ba
 .fechar svg{width:22px;height:22px}
 .form{margin-top:26px;display:grid;gap:16px}
 .campo label{display:block;font:700 11.5px/1.3 var(--sans);letter-spacing:.12em;text-transform:uppercase;margin-bottom:8px;color:var(--text-2)}
-.campo input,.campo select{width:100%;min-height:52px;padding:12px 14px;border:1px solid var(--line-2);border-radius:10px;background:#0E0D0C;font:500 16px var(--sans);color:var(--text);appearance:none}
+.campo input,.campo select{width:100%;min-height:52px;padding:12px 14px;line-height:24px;border:1px solid var(--line-2);border-radius:10px;background:#0E0D0C;font:500 16px var(--sans);color:var(--text);appearance:none}
 .campo select{background:#0E0D0C url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none' stroke='%23D2AE63' stroke-width='1.6'%3E%3Cpath d='M1 1.5l5 5 5-5'/%3E%3C/svg%3E") no-repeat right 14px center;padding-right:38px}
 .campo input:focus,.campo select:focus{outline:2px solid var(--gold);outline-offset:0;border-color:var(--gold)}
 .campo[hidden]{display:none}
@@ -1378,13 +1378,32 @@ var CONFIG = {
   cat.addEventListener('change', function(){ if (!grupo) catTit.textContent = cat.value; });
 
   /* máscara do WhatsApp: (00) 00000-0000 */
+  /* mantém o cursor no lugar certo ao digitar, apagar ou corrigir no meio do número */
+  function mascaraTel(d){
+    if (d.length > 7) return '(' + d.slice(0, 2) + ') ' + d.slice(2, 7) + '-' + d.slice(7);
+    if (d.length > 2) return '(' + d.slice(0, 2) + ') ' + d.slice(2);
+    return d.length ? '(' + d : '';
+  }
+  var telAnterior = '';
   $('whatsapp').addEventListener('input', function(e){
-    var d = e.target.value.replace(/\D/g, '').slice(0, 11), v = d;
-    if (d.length > 7) v = '(' + d.slice(0, 2) + ') ' + d.slice(2, 7) + '-' + d.slice(7);
-    else if (d.length > 2) v = '(' + d.slice(0, 2) + ') ' + d.slice(2);
-    else if (d.length) v = '(' + d;
-    e.target.value = v;
+    if (e.isComposing) return;
+    var el = e.target, pos = el.selectionStart == null ? el.value.length : el.selectionStart;
+    var antes = el.value.slice(0, pos).replace(/\D/g, '').length;   /* quantos dígitos ficam antes do cursor */
+    var d = el.value.replace(/\D/g, '');
+    /* apagou só um parêntese, espaço ou traço: apaga o dígito anterior a ele */
+    if (e.inputType === 'deleteContentBackward' && d === telAnterior.replace(/\D/g, '') && antes > 0) {
+      d = d.slice(0, antes - 1) + d.slice(antes); antes--;
+    }
+    d = d.slice(0, 11);
+    var v = mascaraTel(d);
+    if (v !== el.value) el.value = v;
+    telAnterior = v;
+    var novo = 0, vistos = 0;
+    while (novo < v.length && vistos < Math.min(antes, d.length)) { if (/\d/.test(v[novo])) vistos++; novo++; }
+    if (/^insert/.test(e.inputType || '')) while (novo < v.length && /\D/.test(v[novo])) novo++;   /* ao digitar, pula ") " e "-" */
+    if (document.activeElement === el) el.setSelectionRange(novo, novo);
   });
+  $('whatsapp').addEventListener('compositionend', function(e){ e.target.dispatchEvent(new Event('input')); });
 
   function erro(campo, msg){
     var el = $(campo), p = $('erro-' + campo);
