@@ -602,8 +602,20 @@ dialog::backdrop{background:rgba(0,0,0,.78);-webkit-backdrop-filter:blur(6px);ba
 .hero-bg{-webkit-mask-image:linear-gradient(to bottom,#000 0%,#000 66%,transparent 100%);mask-image:linear-gradient(to bottom,#000 0%,#000 66%,transparent 100%)}
 .hero-meta .hero-data{font:700 10.5px/1 var(--sans);letter-spacing:.12em;gap:8px}
 </style>
+<!-- Meta Pixel -->
+<script>
+!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
+n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
+t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,
+document,'script','https://connect.facebook.net/en_US/fbevents.js');
+fbq('init', '960132592978971');
+fbq('track', 'PageView');
+</script>
+<!-- End Meta Pixel -->
 </head>
 <body>
+<noscript><img height="1" width="1" style="display:none" alt="" src="https://www.facebook.com/tr?id=960132592978971&ev=PageView&noscript=1"></noscript>
 <a class="pular" href="#conteudo-principal">Pular para o conteúdo</a>
 
 <aside class="faixa-topo" aria-label="Data do evento"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>20 a 22 de novembro<span aria-hidden="true">·</span>2ª edição 2026</aside>
@@ -1380,7 +1392,11 @@ var CONFIG = {
       var msg = grupo
         ? 'Olá! Sou ' + d.nome + ' e quero a condição especial para grupo no Acelerador 2026 (ingresso de interesse: ' + d.categoria + ').'
         : 'Olá! Sou ' + d.nome + ' e quero garantir meu ingresso ' + d.categoria + ' no Acelerador 2026.';
-      location.href = 'https://wa.me/' + CONFIG.whatsapp + '?text=' + encodeURIComponent(msg);
+      var destino = 'https://wa.me/' + CONFIG.whatsapp + '?text=' + encodeURIComponent(msg);
+      if (window.fbq) {
+        fbq('track', 'Lead', { content_name: 'Acelerador 2026', content_category: grupo ? 'Grupo' : d.categoria });
+        setTimeout(function(){ location.href = destino; }, 400); /* dá tempo do evento sair antes de ir ao WhatsApp */
+      } else location.href = destino;
     };
     if (CONFIG.leadEndpoint) {
       fetch(CONFIG.leadEndpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(d), keepalive: true })
