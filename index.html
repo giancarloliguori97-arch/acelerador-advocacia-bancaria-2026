@@ -538,6 +538,7 @@ dialog::backdrop{background:rgba(0,0,0,.78);-webkit-backdrop-filter:blur(6px);ba
 .campo input,.campo select{width:100%;min-height:52px;padding:12px 14px;border:1px solid var(--line-2);border-radius:10px;background:#0E0D0C;font:500 16px var(--sans);color:var(--text);appearance:none}
 .campo select{background:#0E0D0C url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none' stroke='%23D2AE63' stroke-width='1.6'%3E%3Cpath d='M1 1.5l5 5 5-5'/%3E%3C/svg%3E") no-repeat right 14px center;padding-right:38px}
 .campo input:focus,.campo select:focus{outline:2px solid var(--gold);outline-offset:0;border-color:var(--gold)}
+.campo[hidden]{display:none}
 .campo [aria-invalid=true]{border-color:#F0A29A}
 .erro{color:#F0A29A;font-size:13.5px;margin-top:6px}
 .form .btn{width:100%;margin-top:6px}
@@ -1116,7 +1117,8 @@ fbq('track', 'PageView');
       <div class="campo"><label for="whatsapp">WhatsApp (com DDD)</label><input id="whatsapp" name="whatsapp" inputmode="tel" autocomplete="tel-national" placeholder="(00) 00000-0000" required><p class="erro" id="erro-whatsapp" hidden></p></div>
       <div class="campo"><label for="email">E-mail</label><input id="email" name="email" type="email" autocomplete="email" required><p class="erro" id="erro-email" hidden></p></div>
       <div class="campo full"><label for="categoria">Ingresso de interesse</label><select id="categoria" name="categoria"><option>Silver</option><option selected>Gold</option><option>Diamond</option></select></div>
-      <div class="campo full"><label for="atuacao">Você já atua com direito bancário?</label><select id="atuacao" name="atuacao" required><option value="">Selecione</option><option>Sim, com consistência</option><option>Sim, estou começando</option><option>Ainda não</option></select><p class="erro" id="erro-atuacao" hidden></p></div>
+      <div class="campo full" id="campo-quantidade" hidden><label for="quantidade">Quantos ingressos seriam para o grupo?</label><select id="quantidade" name="quantidade"><option value="">Selecione</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option></select><p class="erro" id="erro-quantidade" hidden></p></div>
+      <div class="campo full" id="campo-atuacao"><label for="atuacao">Você já atua com direito bancário?</label><select id="atuacao" name="atuacao" required><option value="">Selecione</option><option>Sim, com consistência</option><option>Sim, estou começando</option><option>Ainda não</option></select><p class="erro" id="erro-atuacao" hidden></p></div>
       <div class="campo full"><label for="faturamento">Faturamento mensal do seu escritório hoje</label><select id="faturamento" name="faturamento" required><option value="">Selecione</option><option>Até R$ 10 mil</option><option>De R$ 10 mil a R$ 30 mil</option><option>De R$ 30 mil a R$ 100 mil</option><option>Acima de R$ 100 mil</option></select><p class="erro" id="erro-faturamento" hidden></p></div>
       <div class="full"><button class="btn btn-shine" type="submit" id="enviar">Falar com o comercial</button></div>
       <p class="form-nota full">Seus dados são usados só para o nosso time entrar em contato sobre o evento.</p>
@@ -1137,7 +1139,7 @@ fbq('track', 'PageView');
 var CONFIG = {
   whatsapp: '559891797322',            /* número oficial da página atual */
   gtm: 'GTM-PDRTWVW6',                 /* container oficial; não carrega em localhost/arquivo */
-  leadEndpoint: ''                     /* URL que recebe o lead em JSON (POST). Vazio = só GTM + WhatsApp */
+  leadEndpoint: ''                     /* webhook do Make que recebe o lead (POST). Vazio = só GTM + WhatsApp */
 };
 </script>
 <script>
@@ -1333,10 +1335,16 @@ var CONFIG = {
   });
   /* condição para grupo: mesmo formulário, com título e mensagem de grupo */
   var grupo = false;
-  document.querySelectorAll('[data-ingresso]').forEach(function(b){ b.addEventListener('click', function(){ grupo = false; }, true); });
+  function modoGrupo(on){
+    grupo = on;
+    $('campo-quantidade').hidden = !on;
+    $('campo-atuacao').hidden = on;
+    erro('quantidade', ''); erro('atuacao', '');
+  }
+  document.querySelectorAll('[data-ingresso]').forEach(function(b){ b.addEventListener('click', function(){ modoGrupo(false); }, true); });
   document.querySelectorAll('[data-grupo]').forEach(function(b){
     b.addEventListener('click', function(){
-      grupo = true; catTit.textContent = 'em grupo';
+      modoGrupo(true); catTit.textContent = 'em grupo';
       lead.showModal();
       setTimeout(function(){ $('nome').focus(); }, 30);
     });
@@ -1368,7 +1376,8 @@ var CONFIG = {
       email: $('email').value.trim(),
       categoria: cat.value,
       grupo: grupo,
-      atuacao: $('atuacao').value,
+      quantidade: grupo ? $('quantidade').value : '1',
+      atuacao: grupo ? '' : $('atuacao').value,
       faturamento: $('faturamento').value
     };
     /* mensagens de validação iguais às da página oficial */
@@ -1376,13 +1385,16 @@ var CONFIG = {
       erro('nome', d.nome.length < 2 ? 'Informe seu nome completo.' : ''),
       erro('whatsapp', d.whatsapp.replace(/\D/g, '').length < 10 ? 'Informe um WhatsApp válido com DDD.' : ''),
       erro('email', /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(d.email) ? '' : 'Informe um e-mail válido.'),
-      erro('atuacao', d.atuacao ? '' : 'Selecione uma opção.'),
+      grupo ? erro('quantidade', d.quantidade ? '' : 'Selecione a quantidade de ingressos.') : erro('atuacao', d.atuacao ? '' : 'Selecione uma opção.'),
       erro('faturamento', d.faturamento ? '' : 'Selecione uma opção.')
     ];
-    var primeira = ['nome', 'whatsapp', 'email', 'atuacao', 'faturamento'][falhas.indexOf(true)];
+    var primeira = ['nome', 'whatsapp', 'email', grupo ? 'quantidade' : 'atuacao', 'faturamento'][falhas.indexOf(true)];
     if (primeira) { $(primeira).focus(); return; }
 
     var q = new URLSearchParams(location.search);
+    d.tipo = grupo ? 'Grupo' : 'Individual';
+    d.grupo = grupo ? 'sim' : 'nao';
+    d.data_hora = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
     d.pagina = location.href;
     ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'].forEach(function(k){ d[k] = q.get(k) || ''; });
 
@@ -1390,7 +1402,7 @@ var CONFIG = {
     var ir = function(){
       window.dataLayer.push({ event: 'lead_acelerador', categoria: d.categoria, grupo: grupo });
       var msg = grupo
-        ? 'Olá! Sou ' + d.nome + ' e quero a condição especial para grupo no Acelerador 2026 (ingresso de interesse: ' + d.categoria + ').'
+        ? 'Olá! Sou ' + d.nome + ' e quero a condição especial para grupo no Acelerador 2026 (' + d.quantidade + ' ingressos ' + d.categoria + ').'
         : 'Olá! Sou ' + d.nome + ' e quero garantir meu ingresso ' + d.categoria + ' no Acelerador 2026.';
       var destino = 'https://wa.me/' + CONFIG.whatsapp + '?text=' + encodeURIComponent(msg);
       if (window.fbq) {
@@ -1399,8 +1411,13 @@ var CONFIG = {
       } else location.href = destino;
     };
     if (CONFIG.leadEndpoint) {
-      fetch(CONFIG.leadEndpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(d), keepalive: true })
-        .catch(function(){}).then(ir);
+      /* envio como formulário simples: o Make lê cada campo direto e o navegador não bloqueia por CORS */
+      var corpo = new URLSearchParams();
+      Object.keys(d).forEach(function(k){ corpo.append(k, d[k]); });
+      var feito = false, segue = function(){ if (!feito) { feito = true; ir(); } };
+      fetch(CONFIG.leadEndpoint, { method: 'POST', mode: 'no-cors', body: corpo, keepalive: true })
+        .catch(function(){}).then(segue);
+      setTimeout(segue, 2500); /* se o webhook demorar, não trava a pessoa */
     } else ir();
   });
 
